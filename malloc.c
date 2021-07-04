@@ -24,16 +24,30 @@ void LOG() {
     printf("----------------------\n\n");
 }
 
+void split_block(header_t* block, size_t size) {
+        header_t* new_block = block + size;
+        new_block->size = block->size - size;
+        new_block->next = block->next;
+        new_block->is_free = 1;
+        
+        block->size = size;
+        block->next = new_block;
+}
+
 header_t* find_free_block(header_t* first_block, size_t size) {
-    header_t* best = NULL; // the smallest block which can contain [size]
+    header_t* free_block = NULL; // the smallest block which can contain [size]
     header_t* current = first_block;
     while (current) {
-        if (current->is_free && (best==NULL || (current->size < best->size && current->size >= size))) {
-            best = current;
+        if (current->is_free) {
+            free_block = current;
+            if (current->size >= 2*size) {
+                split_block(current, size);
+            }
+            return free_block;
         }
         current = current->next;
     }
-    return best;
+    return free_block;
 }
 
 header_t* request_memory(header_t* last, size_t size) {
@@ -99,12 +113,18 @@ void free(void* p) {
 
     header_t* h = p - HEADER_SIZE;
     h->is_free = 1;
-    if (h->next->is_free) {
-        h->size += h->next->size;
-        if (h->next->next) {
-            h->next = h->next->next;
+    
+    header_t* cur = first_block;
+    while(cur) {
+        if (cur->next) {
+            if (cur->is_free && cur->next->is_free) {
+                cur->size += cur->next->size;
+                cur->next = cur->next->next;
+            }
         }
+        cur = cur->next;
     }
+
 }
 
 void test() {
@@ -112,14 +132,11 @@ void test() {
     int* b = malloc_t(sizeof(int));
     *a = 10;
     *b = 20;
-    printf("Data: [%d]\n", *a);
-    printf("Data: [%d]\n", *b);
-    LOG();
     free(a);
-    int* c = malloc_t(sizeof(int));
-    *c = 30;
-    printf("Data: [%d]\n", *b);
-    printf("Data: [%d]\n", *c);
+    free(b);
+    LOG();
+    char* c = malloc_t(sizeof(char));
+    *c = 'a';
     LOG();
 }
 
