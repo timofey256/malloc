@@ -92,15 +92,35 @@ void* malloc_t(size_t size) {
     return (block+1);
 }
 
+void free(void* p) {
+    if (p == NULL) {
+        return;
+    }
+
+    header_t* h = p - HEADER_SIZE;
+    h->is_free = 1;
+    if (h->next->is_free) {
+        h->size += h->next->size;
+        if (h->next->next) {
+            h->next = h->next->next;
+        }
+    }
+}
+
 void test() {
     int* a = malloc_t(sizeof(int));
-    *a = 10;
     int* b = malloc_t(sizeof(int));
-    *b = 15;
-    printf("Address: [%p]. Data: [%d]\n", a, *a);
-    printf("Address: [%p]. Data: [%d]\n", b, *b);
-    printf("[%ld]\n", b-a);
-    printf("header size: [%d]", sizeof(header_t));
+    *a = 10;
+    *b = 20;
+    printf("Data: [%d]\n", *a);
+    printf("Data: [%d]\n", *b);
+    LOG();
+    free(a);
+    int* c = malloc_t(sizeof(int));
+    *c = 30;
+    printf("Data: [%d]\n", *b);
+    printf("Data: [%d]\n", *c);
+    LOG();
 }
 
 int main(int argc, char** argv) {
